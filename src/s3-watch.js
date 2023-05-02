@@ -10,33 +10,53 @@ const pool = require("../config/db");
 const { createMultiWatch } = require("../config/aws");
 
 class S3Watcher {
-  async init(channelName) {
-    this.config = await getAwsConfig(channelName);
-    this.bucketName = this.config.bucketName;
-    this.prefix = this.config.destinationFolder;
-    // this.fileType = ".xml";
+  constructor(config) {
+    console.log("config", config);
+    this.bucketName = config.bucketName;
+    this.prefix = config.folderName;
     this.credentials = {
-      accessKeyId: this.config.accessKeyId,
-      secretAccessKey: this.config.secretAccessKey,
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
     };
+    this.region = config.region;
     this.s3 = new S3Client({
-      region: this.config.region,
+      region: config.region,
       credentials: this.credentials,
     });
-    const [rows] = await pool.query(
-      `SELECT * FROM prodenvironment where CHANNEL_NAME='${channelName}'`
-    );
-    if (rows[0].CHNNEL_NAME !== 0) {
-      //   console.log("this.fileType", rows[0].FILEEXTENSION);
-      this.fileType = rows[0].FILEEXTENSION;
-      this.groupId = rows[0].GROUPID;
-      this.companyId = rows[0].COMPANYID;
-      this.path = rows[0].WATCHPARAMS;
-    }
+    this.fileType = config.fileType;
+    this.groupId = config.groupId;
+    this.companyId = config.companyId;
+    this.path = config.path;
+  }
+  async init() {
+    // const watches = await createMultiWatch();
+    // console.log("");
+    // // this.config = await getAwsConfig(channelName);
+    // this.bucketName = this.config.bucketName;
+    // this.prefix = this.config.destinationFolder;
+    // // this.fileType = ".xml";
+    // this.credentials = {
+    //   accessKeyId: this.config.accessKeyId,
+    //   secretAccessKey: this.config.secretAccessKey,
+    // };
+    // this.s3 = new S3Client({
+    //   region: this.config.region,
+    //   credentials: this.credentials,
+    // });
+    // const [rows] = await pool.query(
+    //   `SELECT * FROM prodenvironment where CHANNEL_NAME='${channelName}'`
+    // );
+    // if (rows[0].CHNNEL_NAME !== 0) {
+    //   //   console.log("this.fileType", rows[0].FILEEXTENSION);
+    //   this.fileType = rows[0].FILEEXTENSION;
+    //   this.groupId = rows[0].GROUPID;
+    //   this.companyId = rows[0].COMPANYID;
+    //   this.path = rows[0].WATCHPARAMS;
+    // }
   }
 
   async watch(onChange) {
-    await this.init("s32");
+    // await this.init("s32");
     const currentObjects = await this.s3.send(
       new ListObjectsCommand({ Bucket: this.bucketName, Prefix: this.prefix })
     );

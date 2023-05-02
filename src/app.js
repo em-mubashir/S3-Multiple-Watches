@@ -1,6 +1,7 @@
 const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
+const { createMultiWatch } = require("../config/aws");
 const S3Watcher = require("./s3-watch");
 
 const app = express();
@@ -9,20 +10,30 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
-const s3Watcher = new S3Watcher();
+(async () => {
+  const watches = await createMultiWatch();
+  // Create a new instance of S3Watcher for each S3 configuration object
+  const s3Watchers = watches.map((config) => new S3Watcher(config));
+  // Start watching each S3 bucket for changes
+  s3Watchers.forEach((s3Watcher) => {
+    s3Watcher.watch((newObjects) => {
+      console.log("newObjects", newObjects);
+      console.log(`Detected ${newObjects.length} new objects in the bucket`);
+      // Download and save each new object
+      s3Watcher.process(newObjects);
+    });
+  });
+})();
+
+// const s3Watcher = new S3Watcher();
 
 // Start watching the S3 bucket for changes
-s3Watcher.watch(
-  (newObjects) => {
-    console.log("newObjects", newObjects);
-    console.log(`Detected ${newObjects.length} new objects in the bucket`);
-    // Trigger your job here using the newObjects array
-    // Download and save each new object
-    processNewObjects(newObjects);
-  },
-  "TG-46350/",
-  ".xml"
-);
+// s3Watcher.watch((newObjects) => {
+//   console.log("newObjects", newObjects);
+//   console.log(`Detected ${newObjects.length} new objects in the bucket`);
+//   // Download and save each new object
+//   s3Watcher.process(newObjects);
+// });
 
 // Route
 app.get("/", async (req, res) => {
